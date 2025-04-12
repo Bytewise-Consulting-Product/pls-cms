@@ -359,10 +359,6 @@ export function SiteHeader() {
                   height={40}
                   className="h-full w-auto object-contain"
                   priority
-                  onError={() => {
-                    setScrolledLogoError(true)
-                    console.error("Failed to load scrolled logo:", scrolledLogoSrc)
-                  }}
                 />
               ) : (
                 <div className="h-full flex items-center text-white font-bold text-xl">
@@ -381,10 +377,6 @@ export function SiteHeader() {
                   height={50}
                   className="h-full w-auto object-contain"
                   priority
-                  onError={() => {
-                    setLogoError(true)
-                    console.error("Failed to load logo:", logoSrc)
-                  }}
                 />
               ) : (
                 <div className="h-full flex items-center text-primary font-bold text-xl">
@@ -458,9 +450,10 @@ export function SiteHeader() {
             const categories = groupChildrenByCategory(item.children)
             const categoryNames = Object.keys(categories)
 
-            // Split categories into columns (4 columns max)
+            // Limit to 6 items per page
+            const ITEMS_PER_PAGE = 6
             const columnsCount = Math.min(4, categoryNames.length)
-            const categoriesPerColumn = Math.ceil(categoryNames.length / columnsCount)
+            const categoriesPerColumn = Math.ceil(Math.min(ITEMS_PER_PAGE, categoryNames.length) / columnsCount)
             const columns: string[][] = []
 
             for (let i = 0; i < columnsCount; i++) {
@@ -468,11 +461,11 @@ export function SiteHeader() {
             }
 
             // Calculate total pages
-            const totalPages = Math.ceil(categoryNames.length / (columnsCount * categoriesPerColumn))
+            const totalPages = Math.ceil(categoryNames.length / ITEMS_PER_PAGE)
 
             // Get current page categories
-            const startIdx = categoryPage * (columnsCount * categoriesPerColumn)
-            const endIdx = startIdx + columnsCount * categoriesPerColumn
+            const startIdx = categoryPage * ITEMS_PER_PAGE
+            const endIdx = startIdx + ITEMS_PER_PAGE
             const currentPageCategories = categoryNames.slice(startIdx, endIdx)
 
             // Get featured image for this menu item
@@ -495,11 +488,6 @@ export function SiteHeader() {
                           width={260}
                           height={256}
                           className="object-cover opacity-40"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.src = "/placeholder.svg?height=256&width=260"
-                            console.error(`Failed to load submenu image for ${item.title}:`, featuredImage)
-                          }}
                         />
                         <div className="absolute inset-0 flex flex-col justify-end p-6">
                           <h3 className="text-2xl font-bold mb-2">{item.title.toUpperCase()}</h3>
@@ -513,17 +501,26 @@ export function SiteHeader() {
                       <div key={`column-${columnIndex}`}>
                         {columnCategories.map((categoryName) => {
                           const categoryItems = categories[categoryName] || []
+                          // Limit to 6 subitems per category
+                          const limitedItems = categoryItems.slice(0, ITEMS_PER_PAGE)
                           return (
                             <div key={`category-${categoryName}`} className="mb-6">
                               <h3 className="text-[#003087] font-semibold text-lg mb-3">{categoryName}</h3>
                               <ul className="space-y-2">
-                                {categoryItems.map((subItem) => (
+                                {limitedItems.map((subItem) => (
                                   <li key={subItem.id}>
                                     <Link href={subItem.url || "#"} className="text-gray-700 hover:text-[#FF6B35]">
                                       {subItem.title}
                                     </Link>
                                   </li>
                                 ))}
+                                {categoryItems.length > ITEMS_PER_PAGE && (
+                                  <li>
+                                    <Link href="#" className="text-[#FF6B35] hover:underline text-sm">
+                                      View all {categoryItems.length} items...
+                                    </Link>
+                                  </li>
+                                )}
                               </ul>
                             </div>
                           )
@@ -557,12 +554,14 @@ export function SiteHeader() {
             )
           } else {
             // Regular dropdown
+            // Limit to 6 items per page for both subheadings and subitems
+            const ITEMS_PER_PAGE = 6
             // Calculate total pages for regular dropdown
-            const totalPages = Math.ceil((item.children?.length || 0) / 9) // 3x3 grid
+            const totalPages = Math.ceil((item.children?.length || 0) / ITEMS_PER_PAGE)
 
             // Get current page items
-            const startIdx = categoryPage * 9
-            const currentPageItems = item.children.slice(startIdx, startIdx + 9)
+            const startIdx = categoryPage * ITEMS_PER_PAGE
+            const currentPageItems = item.children.slice(startIdx, startIdx + ITEMS_PER_PAGE)
 
             // Get featured image for this menu item
             const featuredImage = getSubmenuImage(item.title)
@@ -584,11 +583,6 @@ export function SiteHeader() {
                           width={200}
                           height={256}
                           className="object-cover rounded-lg"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.src = "/placeholder.svg?height=256&width=200"
-                            console.error(`Failed to load submenu image for ${item.title}:`, featuredImage)
-                          }}
                         />
                       </div>
                       <h2 className="text-2xl font-bold text-white mb-2">{item.title}</h2>
@@ -605,7 +599,8 @@ export function SiteHeader() {
                             <h3 className="font-semibold text-[#003087] mb-2">{child.title}</h3>
                             {child.subItems && child.subItems.length > 0 && (
                               <ul className="space-y-1 mt-2">
-                                {child.subItems.map((subItem) => (
+                                {/* Limit subitems to 6 */}
+                                {child.subItems.slice(0, ITEMS_PER_PAGE).map((subItem) => (
                                   <li key={subItem.id}>
                                     <Link
                                       href={subItem.url || "#"}
@@ -615,6 +610,13 @@ export function SiteHeader() {
                                     </Link>
                                   </li>
                                 ))}
+                                {child.subItems.length > ITEMS_PER_PAGE && (
+                                  <li>
+                                    <Link href={child.url || "#"} className="text-[#FF6B35] hover:underline text-sm">
+                                      View all {child.subItems.length} items...
+                                    </Link>
+                                  </li>
+                                )}
                               </ul>
                             )}
                           </div>
@@ -665,10 +667,6 @@ export function SiteHeader() {
                       width={120}
                       height={40}
                       className="h-full w-auto object-contain"
-                      onError={() => {
-                        setScrolledLogoError(true)
-                        console.error("Failed to load white logo in mobile menu:", scrolledLogoSrc)
-                      }}
                     />
                   ) : (
                     <div className="h-full flex items-center text-white font-bold text-xl">
@@ -726,7 +724,8 @@ export function SiteHeader() {
 
                           {expandedMobileItems.includes(item.id) && item.children && item.children.length > 0 && (
                             <ul className="pl-4 border-l border-white/20 space-y-2">
-                              {item.children.map((child) => (
+                              {/* Limit to 6 items in mobile menu */}
+                              {item.children.slice(0, 6).map((child) => (
                                 <li key={child.id}>
                                   {child.subItems && child.subItems.length > 0 ? (
                                     <div>
@@ -745,7 +744,8 @@ export function SiteHeader() {
 
                                       {expandedMobileSubItems.includes(child.id) && (
                                         <ul className="pl-4 border-l border-white/10 mt-1 space-y-1">
-                                          {child.subItems.map((subItem) => (
+                                          {/* Limit to 6 subitems in mobile menu */}
+                                          {child.subItems.slice(0, 6).map((subItem) => (
                                             <li key={subItem.id}>
                                               <Link
                                                 href={subItem.url || "#"}
@@ -756,6 +756,17 @@ export function SiteHeader() {
                                               </Link>
                                             </li>
                                           ))}
+                                          {child.subItems.length > 6 && (
+                                            <li>
+                                              <Link
+                                                href={child.url || "#"}
+                                                className="block text-[#FF6B35] py-1 text-sm"
+                                                onClick={() => setMobileMenuOpen(false)}
+                                              >
+                                                View all {child.subItems.length} items...
+                                              </Link>
+                                            </li>
+                                          )}
                                         </ul>
                                       )}
                                     </div>
@@ -770,6 +781,17 @@ export function SiteHeader() {
                                   )}
                                 </li>
                               ))}
+                              {item.children.length > 6 && (
+                                <li>
+                                  <Link
+                                    href={item.url || "#"}
+                                    className="block text-[#FF6B35] py-1"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                  >
+                                    View all {item.children.length} items...
+                                  </Link>
+                                </li>
+                              )}
                             </ul>
                           )}
                         </div>
