@@ -1,9 +1,70 @@
+"use client"
+
 import Link from "next/link"
 import { Mail, Phone, MapPin, Clock, FileDown } from "lucide-react"
 import StaticPageLayout from "@/components/static-page-layout"
 import { Button } from "@/components/ui/button"
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import axios from "axios"
+import { toast } from "@/components/ui/use-toast"
+
+// Define the contact form schema with Zod
+const contactSchema = z.object({
+  firstname: z.string().min(1, "First name is required"),
+  lastname: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  subject: z.string().min(1, "Subject is required"),
+  message: z.string().min(10, "Message must be at least 10 characters"),
+})
+
+// Define the type for our form data
+type ContactFormData = z.infer<typeof contactSchema>
 
 export default function ContactUsPage() {
+  const [isLoading, setIsLoading] = useState(false)
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<ContactFormData>({
+    resolver: zodResolver(contactSchema),
+  })
+
+  const onSubmit = async (data: ContactFormData) => {
+    const { firstname, lastname, email, subject, message } = data
+    try {
+      setIsLoading(true)
+      // Update to use the local API route instead of the external URL
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/contactUs/createMessage`, {
+        firstName: firstname,
+        lastName: lastname,
+        subject: subject,
+        message: message,
+        email: email,
+      })
+      toast({
+        title: "Message sent",
+        description: "Your message has been sent successfully. We'll get back to you soon!",
+        variant: "default",
+      })
+      reset()
+    } catch (error) {
+      console.error("Error submitting contact form:", error)
+      toast({
+        title: "Error",
+        description: "Something went wrong while sending your message. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <StaticPageLayout title="Contact Us">
       <div className="space-y-10">
@@ -59,34 +120,53 @@ export default function ContactUsPage() {
         {/* Contact Form */}
         <div className="bg-white p-8 rounded-lg shadow-md">
           <h3 className="text-xl font-bold text-[#003087] mb-6">Send Us a Message</h3>
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Your Name
+                <label htmlFor="firstname" className="block text-sm font-medium text-gray-700 mb-1">
+                  First Name
                 </label>
                 <input
                   type="text"
-                  id="name"
-                  name="name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#003087] focus:border-[#003087]"
-                  placeholder="John Doe"
-                  required
+                  id="firstname"
+                  {...register("firstname")}
+                  className={`w-full px-4 py-2 border ${
+                    errors.firstname ? "border-red-500" : "border-gray-300"
+                  } rounded-md focus:ring-[#003087] focus:border-[#003087]`}
+                  placeholder="John"
                 />
+                {errors.firstname && <p className="mt-1 text-sm text-red-600">{errors.firstname.message}</p>}
               </div>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Your Email
+                <label htmlFor="lastname" className="block text-sm font-medium text-gray-700 mb-1">
+                  Last Name
                 </label>
                 <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#003087] focus:border-[#003087]"
-                  placeholder="john@example.com"
-                  required
+                  type="text"
+                  id="lastname"
+                  {...register("lastname")}
+                  className={`w-full px-4 py-2 border ${
+                    errors.lastname ? "border-red-500" : "border-gray-300"
+                  } rounded-md focus:ring-[#003087] focus:border-[#003087]`}
+                  placeholder="Doe"
                 />
+                {errors.lastname && <p className="mt-1 text-sm text-red-600">{errors.lastname.message}</p>}
               </div>
+            </div>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                Your Email
+              </label>
+              <input
+                type="email"
+                id="email"
+                {...register("email")}
+                className={`w-full px-4 py-2 border ${
+                  errors.email ? "border-red-500" : "border-gray-300"
+                } rounded-md focus:ring-[#003087] focus:border-[#003087]`}
+                placeholder="john@example.com"
+              />
+              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
             </div>
             <div>
               <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
@@ -95,11 +175,13 @@ export default function ContactUsPage() {
               <input
                 type="text"
                 id="subject"
-                name="subject"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#003087] focus:border-[#003087]"
+                {...register("subject")}
+                className={`w-full px-4 py-2 border ${
+                  errors.subject ? "border-red-500" : "border-gray-300"
+                } rounded-md focus:ring-[#003087] focus:border-[#003087]`}
                 placeholder="How can we help you?"
-                required
               />
+              {errors.subject && <p className="mt-1 text-sm text-red-600">{errors.subject.message}</p>}
             </div>
             <div>
               <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
@@ -107,16 +189,18 @@ export default function ContactUsPage() {
               </label>
               <textarea
                 id="message"
-                name="message"
+                {...register("message")}
                 rows={5}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-[#003087] focus:border-[#003087]"
+                className={`w-full px-4 py-2 border ${
+                  errors.message ? "border-red-500" : "border-gray-300"
+                } rounded-md focus:ring-[#003087] focus:border-[#003087]`}
                 placeholder="Please describe your inquiry in detail..."
-                required
               ></textarea>
+              {errors.message && <p className="mt-1 text-sm text-red-600">{errors.message.message}</p>}
             </div>
             <div>
-              <Button type="submit" className="w-full md:w-auto bg-[#003087] hover:bg-[#003087]">
-                Send Message
+              <Button type="submit" className="w-full md:w-auto bg-[#003087] hover:bg-[#002670]" disabled={isLoading}>
+                {isLoading ? "Sending..." : "Send Message"}
               </Button>
             </div>
           </form>

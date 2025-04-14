@@ -6,6 +6,7 @@ import { getQuoteSchema, type FormData } from "@/validation/schema"
 import { axios } from "@/config/axios"
 import { useMessage } from "@/hooks/useMessage"
 import { useLoading } from "@/hooks/useLoading"
+import { toast } from "@/components/ui/use-toast"
 
 export default function GetQuotePage() {
   const {
@@ -25,7 +26,11 @@ export default function GetQuotePage() {
       }
       startLoading()
       await axios.post(`${process.env.NEXT_PUBLIC_API_URL}getQuotes/createQuote`, data)
-      return successMessage("Your Quote has been submitted successfully Please check your email")
+      toast({
+        title: "Quote Submitted",
+        description: "Your quote has been submitted successfully.",
+        duration: 5000,
+      }) 
     } catch (error) {
       console.error("Error submitting form:", error)
 

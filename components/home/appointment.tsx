@@ -29,6 +29,15 @@ export default function Appointment() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [responseMessage, setResponseMessage] = useState("")
 
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    detail: "",
+    service: "",
+  });
+
   const {
     register,
     handleSubmit,
@@ -42,11 +51,17 @@ export default function Appointment() {
     setIsLoading(true)
 
     try {
-      const response = await submitConsultation(data)
+      const response = await fetch("https://localhost:8000/api/v1/getConsultation/requestAConsultation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      // const response = await submitConsultation(data)
 
-      if (response.success) {
+      const responseData = await response.json();
+      if (responseData.success) {
         setIsSubmitted(true)
-        setResponseMessage(response.message)
+        setResponseMessage(responseData.message)
         reset()
 
         // Reset success message after 8 seconds
@@ -54,7 +69,7 @@ export default function Appointment() {
           setIsSubmitted(false)
         }, 8000)
       } else {
-        setResponseMessage(response.message)
+        setResponseMessage(responseData.message)
       }
     } catch (error) {
       console.error("Error submitting consultation request:", error)
@@ -63,6 +78,8 @@ export default function Appointment() {
       setIsLoading(false)
     }
   }
+
+  
 
   return (
     <section className="relative py-16 mb-32 md:py-24 dark:bg-white">
