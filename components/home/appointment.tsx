@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { consultationSchema, type ConsultationFormData } from "@/validation/consultationschema"
-import { submitConsultation } from "@/app/actions/consultation-actions"
+import { useToast } from "@/hooks/use-toast"
 
 // Contact Card Component
 const ContactCard = ({ icon, title, detail }: { icon: React.ReactNode; title: string; detail: string }) => (
@@ -28,6 +28,7 @@ export default function Appointment() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [responseMessage, setResponseMessage] = useState("")
+  const { toast } = useToast()
 
   const [formData, setFormData] = useState({
     name: "",
@@ -36,7 +37,7 @@ export default function Appointment() {
     address: "",
     detail: "",
     service: "",
-  });
+  })
 
   const {
     register,
@@ -51,18 +52,35 @@ export default function Appointment() {
     setIsLoading(true)
 
     try {
+      // Combine date and time
+      const combinedDateTime = data.date && data.time ? `${data.date}T${data.time}` : data.date
+
+      const formDataToSubmit = {
+        ...data,
+        date: combinedDateTime,
+      }
+
       const response = await fetch("https://localhost:8000/api/v1/getConsultation/requestAConsultation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+        body: JSON.stringify(formDataToSubmit),
+      })
       // const response = await submitConsultation(data)
 
-      const responseData = await response.json();
+      const responseData = await response.json()
       if (responseData.success) {
         setIsSubmitted(true)
         setResponseMessage(responseData.message)
         reset()
+
+        // Show success toast notification
+        toast({
+          title: "Consultation Request Submitted!",
+          description:
+            responseData.message ||
+            "Your consultation request has been successfully submitted. We'll contact you soon.",
+          variant: "default",
+        })
 
         // Reset success message after 8 seconds
         setTimeout(() => {
@@ -70,16 +88,28 @@ export default function Appointment() {
         }, 8000)
       } else {
         setResponseMessage(responseData.message)
+
+        // Show error toast
+        toast({
+          title: "Submission Failed",
+          description: responseData.message || "There was an error submitting your request. Please try again.",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error("Error submitting consultation request:", error)
       setResponseMessage("An unexpected error occurred. Please try again.")
+
+      // Show error toast for exceptions
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
   }
-
-  
 
   return (
     <section className="relative py-16 mb-32 md:py-24 dark:bg-white">
@@ -177,7 +207,7 @@ export default function Appointment() {
                 <div>
                   <label className="block text-white mb-2">Phone Number</label>
                   <Input
-                    type="tel"
+                    type="number"
                     {...register("phone")}
                     className="w-full px-4 py-2 rounded-lg"
                     aria-invalid={errors.phone ? "true" : "false"}
@@ -194,12 +224,27 @@ export default function Appointment() {
                 <div>
                   <label className="block text-white mb-2">Consultation Date</label>
                   <Input
-                    type="datetime-local"
+                    type="date"
                     {...register("date")}
-                    className="w-full px-4 py-2 rounded-lg"
+                    className="w-full px-4 py-2 rounded-lg mb-2"
                     aria-invalid={errors.date ? "true" : "false"}
                   />
+                  <select
+                    {...register("time")}
+                    className="w-full px-4 py-2 rounded-lg"
+                    aria-invalid={errors.time ? "true" : "false"}
+                  >
+                    <option value="">Select a time</option>
+                    {Array.from({ length: 17 }, (_, i) => i + 9)
+                      .filter((hour) => hour >= 9 && hour <= 17)
+                      .map((hour) => (
+                        <option key={hour} value={`${hour}:00`}>
+                          {hour === 12 ? "12:00 PM" : hour < 12 ? `${hour}:00 AM` : `${hour - 12}:00 PM`}
+                        </option>
+                      ))}
+                  </select>
                   {errors.date && <p className="text-red-300 text-sm mt-1">{errors.date.message}</p>}
+                  {errors.time && <p className="text-red-300 text-sm mt-1">{errors.time.message}</p>}
                 </div>
 
                 <div>
