@@ -84,7 +84,7 @@ export default function GetQuotePage() {
             </label>
             <input
               id="phone"
-              type="tel"
+              type="phone"
               {...register("phone")}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#003087] text-black ${
                 errors.phone ? "border-red-500" : "border-gray-300"
